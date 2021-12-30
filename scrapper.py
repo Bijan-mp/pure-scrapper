@@ -2,9 +2,44 @@ import re
 import json
 import requests
 from bs4 import BeautifulSoup
+from constants import BASE_URL, PRODUCT_CATEGORY_URL, PRODUCT_PRICE_CHART_BASE_URL
 
+class BaseScrapper():
+    """
+    The class contains methods to get data from the web.
+    """
 
-class ProductScraper:
+    def get_soup(self, url=None, html_doc=None, parser="html.parser"):
+        """
+        Get HTML source url or HTML document(as a text) and return beautifulsoup object
+        raise requests.exceptions.RequestException
+        """
+        if url is not None:
+            html_doc = requests.get(url).text
+            # To prevent this error : UnicodeEncodeError: 'charmap' codec can't encode character '\u011f'
+            # if show the error use below line
+            html_doc = html_doc.encode("UTF-8")
+
+        return BeautifulSoup(html_doc, parser)
+
+    def fetch_json_data_as_object(self, url ):
+        """
+        fetch_json_data_as_object method fetch json data from url and
+        return dictionary object
+        raise requests.exceptions.RequestException
+        """
+        
+        # try :
+        html_doc = requests.get(url).text
+        html_doc = html_doc.encode("UTF-8")
+        return json.loads(str(html_doc))
+        # except requests.exceptions.RequestException:
+        #     ras = requests.exceptions.RequestException
+
+    def testme(self):
+        print("test me!")
+
+class ProductScraper(BaseScrapper):
     """
     This class handle a product scrapping proccess
     """
@@ -15,18 +50,7 @@ class ProductScraper:
         self.product_base_url = base_url + product_base_url
         self.price_history_base_url = base_url + price_history_base_url
         self.product_list = []
-
-    def get_soup(url=None, html_doc=None, parser="html.parser"):
-        """
-        Get HTML source url or HTML document(as a text) and return beautifulsoup object
-        """
-        if url is not None:
-            html_doc = requests.get(url).text
-            # To prevent this error : UnicodeEncodeError: 'charmap' codec can't encode character '\u011f'
-            # if show the error use below line
-            html_doc = html_doc.encode("UTF-8")
-
-        return BeautifulSoup(html_doc, parser)
+        self.products_price_history = {}
 
     def fetch_category_page_product_list(self):
         '''
@@ -65,10 +89,16 @@ class ProductScraper:
 
         return self.product_list
 
-    def fetch_products_price_history(self):
+    def fetch_all_products_price_history(self):
 
         for product in self.product_list:
 
+            if self.exist_any_product_price_history() :
+                # add current price to the Product history table
+                pass
+            else:
+                product_price_history = self.fetch_product_price_history(product['id'])
+                self.products_price_history[product['id']] = product_price_history
             pass
 
     def fetch_product_price_history(self, product_id):
@@ -77,3 +107,12 @@ class ProductScraper:
         print(url)
         price_list_soup = self.get_soup(url)
         return json.loads(str(price_list_soup))
+
+    def exist_any_product_price_history(self, product_id):
+        """
+        The method check product history database,
+        If exist any price history for the product, return true
+        if dose not exist any price history for the product, return false
+        """
+
+        return False
